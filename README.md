@@ -1,4 +1,5 @@
 # VT 文字转语音工具
+![vtts](./vtts.png)
 
 一款功能强大的文字转语音桌面应用，支持多种音色和音频合并功能。
 
@@ -23,14 +24,14 @@
 
 ### 下载安装
 
-1. 访问[发布页面](https://github.com/zhagons/vtts/releases)下载最新版本
+1. 访问[发布页面](https://github.com/zhagons/V-tts/releases)下载最新版本
 2. 运行安装程序，按照提示完成安装
 
 ### 从源码构建
 
 ```bash
 # 克隆项目
-git clone https://github.com/zhagons/vtts.git
+git clone https://github.com/zhagons/V-tts.git
 
 # 进入项目目录
 cd vtts
