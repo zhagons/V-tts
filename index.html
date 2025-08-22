@@ -1,0 +1,2016 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VT - 文字转语音工具</title>
+    <style>
+        :root {
+            --text-color: #2b2d42;
+            --primary-color: #4361ee;
+            --primary-light: #4895ef;
+            --primary-dark: #3a56d4;
+            --secondary-color: #7209b7;
+            --success-color: #4cc9f0;
+            --dark-color: #2b2d42;
+            --light-color: #f8f9fa;
+            --danger-color: #e63946;
+            --warning-color: #ff9e00;
+            --gray-color: #8d99ae;
+            --border-color: #e0e0e0;
+            --user-message-bg: var(--primary-color);
+            --system-message-bg: #f0f2f5;
+            --sidebar-bg: #ffffff;
+            --header-bg: #ffffff;
+            --input-bg: #ffffff;
+            --shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            --transition: all 0.3s ease;
+            --scrollbar-bg: rgba(0, 0, 0, 0.1);
+            --border-radius: 12px;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        /* 暗黑模式 */
+        .dark-mode {
+            --text-color: #f0f2f5;
+            --dark-color: #f8f9fa;
+            --light-color: #121212;
+            --gray-color: #adb5bd;
+            --border-color: #495057;
+            --system-message-bg: #343a40;
+            --sidebar-bg: #1e1e1e;
+            --header-bg: #1e1e1e;
+            --input-bg: #2d2d2d;
+            --shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            --scrollbar-bg: rgba(255, 255, 255, 0.1);
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        ::-webkit-scrollbar {
+            background-color: transparent;
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: var(--scrollbar-bg);
+            border-radius: 8px;
+        }
+
+        ::selection {
+            color: #000;
+            background: rgba(255, 255, 255, .68)
+        }
+
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            height: 100vh;
+            background-color: var(--light-color);
+            display: flex;
+            flex-direction: column;
+            color: var(--text-color);
+            line-height: 1.6;
+        }
+
+        .header {
+            background-color: var(--header-bg);
+            color: var(--dark-color);
+            padding: 12px 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            font-size: 1.6rem;
+            color: var(--primary-color);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            color: var(--gray-color);
+            font-size: 1.2rem;
+        }
+
+        .theme-toggle:hover {
+            color: var(--primary-color);
+            background-color: rgba(67, 97, 238, 0.1);
+        }
+
+        .dark-mode .theme-toggle:hover {
+            background-color: rgba(67, 97, 238, 0.2);
+        }
+
+        .container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 左侧音色列表 */
+        .voice-panel {
+            width: 280px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: var(--transition);
+        }
+
+        .panel-header {
+            padding: 16px 20px;
+            font-weight: 600;
+            background-color: var(--sidebar-bg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .voice-search {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 16px;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--border-color);
+            outline: none;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            background-color: var(--input-bg);
+            color: inherit;
+            box-shadow: var(--card-shadow);
+        }
+
+        .search-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+
+        .voice-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0;
+        }
+
+        .voice-item {
+            padding: 14px 16px;
+            margin: 0 8px 8px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            background-color: var(--sidebar-bg);
+            box-shadow: var(--card-shadow);
+            border: 1px solid transparent;
+        }
+
+        .voice-item:hover {
+            background-color: rgba(67, 97, 238, 0.05);
+            border-color: rgba(67, 97, 238, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .dark-mode .voice-item:hover {
+            background-color: rgba(67, 97, 238, 0.15);
+        }
+
+        .voice-item.active {
+            background-color: rgba(67, 97, 238, 0.1);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 1px var(--primary-color);
+        }
+
+        .dark-mode .voice-item.active {
+            background-color: rgba(67, 97, 238, 0.2);
+        }
+
+        .voice-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .voice-name {
+            font-weight: 600;
+            color: var(--dark-color);
+            font-size: 0.95rem;
+        }
+
+        .voice-tag {
+            background-color: var(--primary-light);
+            color: white;
+            font-size: 0.7rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-weight: 500;
+        }
+
+        .voice-lang {
+            font-size: 0.85rem;
+            color: var(--gray-color);
+            margin-bottom: 6px;
+        }
+
+        .voice-details {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            font-size: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .voice-detail-item {
+            background-color: var(--system-message-bg);
+            padding: 4px 10px;
+            border-radius: 12px;
+            color: var(--gray-color);
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .voice-detail-item i {
+            font-size: 0.7rem;
+        }
+
+        /* 右侧聊天区域 */
+        .chat-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            background-color: var(--light-color);
+        }
+
+        .voice-info-bar {
+            background: linear-gradient(90deg, var(--primary-light), var(--primary-color));
+            color: var(--dark-color);
+            padding: 12px 20px;
+            font-size: 0.9rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--primary-color);
+            box-shadow: 0 0 0 1px var(--primary-color) inset;
+            background: rgba(67, 97, 238, 0.1);
+            border-radius: 10px;
+            z-index: 5;
+        }
+
+        .dark-mode .voice-info-bar {
+            background: rgba(67, 97, 238, 0.2);
+        }
+
+        .voice-info-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .voice-info-right {
+            display: flex;
+            gap: 10px;
+        }
+
+        .voice-setting {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--dark-color);
+        }
+
+        .voice-setting:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .setting-icon {
+            font-size: 0.9rem;
+        }
+
+        .chat-history {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--light-color);
+            background-image:
+                linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .dark-mode .chat-history {
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 16px;
+            margin-bottom: 16px;
+            border-radius: var(--border-radius);
+            position: relative;
+            animation: fadeIn 0.3s ease;
+            box-shadow: var(--card-shadow);
+            line-height: 1.5;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background-color: var(--user-message-bg);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .system-message,
+        .system-merged-message {
+            align-self: flex-start;
+            background-color: var(--system-message-bg);
+            color: var(--text-color);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .user-message .message-header {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .system-message .message-header {
+            color: var(--gray-color);
+        }
+
+        .message-text {
+            margin-bottom: 10px;
+            word-break: break-word;
+        }
+
+        .message-audio {
+            display: flex;
+            align-items: center;
+            margin-top: 12px;
+        }
+
+        .audio-player {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            min-width: 200px;
+        }
+
+        .play-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-message .play-button {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .user-message .play-button:hover {
+            background-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .system-message .play-button:hover {
+            background-color: var(--primary-light);
+        }
+
+        .audio-progress {
+            flex: 1;
+            height: 6px;
+            background-color: rgba(0, 0, 0, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .dark-mode .audio-progress {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .user-message .audio-progress {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .audio-progress-filled {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .user-message .audio-progress-filled {
+            background-color: white;
+        }
+
+        .audio-time {
+            font-size: 0.8rem;
+            min-width: 40px;
+            text-align: center;
+            font-feature-settings: "tnum";
+            font-variant-numeric: tabular-nums;
+        }
+
+        .user-message .audio-time {
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .system-message .audio-time {
+            color: var(--gray-color);
+        }
+
+        .download-button {
+            background: none;
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            margin-left: 8px;
+            flex-shrink: 0;
+            color: inherit;
+            font-size: 1rem;
+        }
+
+        .system-message .download-button {
+            color: var(--gray-color);
+            border-color: var(--border-color);
+        }
+
+        .system-message .download-button:hover {
+            background-color: rgba(67, 97, 238, 0.1);
+            color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .dark-mode .system-message .download-button:hover {
+            background-color: rgba(67, 97, 238, 0.2);
+        }
+
+        /* 合并音频按钮区域 */
+        .merge-audio-panel {
+            position: fixed;
+            bottom: 90px;
+            right: 20px;
+            background-color: var(--header-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 12px 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 100;
+            animation: slideUp 0.2s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .merge-audio-panel.active {
+            display: flex;
+        }
+
+        .merge-audio-count {
+            font-size: 0.9rem;
+            color: var(--dark-color);
+            font-weight: 500;
+        }
+
+        .merge-audio-button {
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .merge-audio-button:hover:not(:disabled) {
+            background: #5e0a98;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .merge-audio-button:disabled {
+            background-color: var(--gray-color);
+            cursor: not-allowed;
+        }
+
+        .input-area {
+            padding: 16px;
+            background-color: var(--input-bg);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            position: relative;
+            z-index: 5;
+        }
+
+        .text-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            outline: none;
+            font-size: 1rem;
+            transition: var(--transition);
+            resize: none;
+            min-height: 48px;
+            max-height: 150px;
+            font-family: inherit;
+            background-color: var(--input-bg);
+            color: var(--text-color);
+            box-shadow: var(--card-shadow);
+        }
+
+        .text-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+
+        .send-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            width: 48px;
+            height: 48px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .send-button:hover:not(:disabled) {
+            background-color: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .send-button:disabled {
+            background-color: var(--gray-color);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .send-icon {
+            font-size: 1.2rem;
+        }
+
+        .status {
+            padding: 12px 16px;
+            text-align: center;
+            color: var(--gray-color);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border-color);
+            transition: var(--transition);
+            background-color: var(--input-bg);
+        }
+
+        .status.error {
+            background-color: rgba(230, 57, 70, 0.1);
+            color: var(--danger-color);
+        }
+
+        .dark-mode .status.error {
+            background-color: rgba(230, 57, 70, 0.2);
+        }
+
+        .status.success {
+            background-color: rgba(76, 201, 240, 0.1);
+            color: var(--success-color);
+        }
+
+        .dark-mode .status.success {
+            background-color: rgba(76, 201, 240, 0.2);
+        }
+
+        /* 音色设置模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(3px);
+        }
+
+        .modal-content {
+            background-color: var(--sidebar-bg);
+            border-radius: var(--border-radius);
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            animation: modalOpen 0.3s ease;
+            overflow: hidden;
+        }
+
+        @keyframes modalOpen {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--header-bg);
+        }
+
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--gray-color);
+            transition: var(--transition);
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .close-button:hover {
+            background-color: rgba(0, 0, 0, 0.05);
+            color: var(--dark-color);
+        }
+
+        .dark-mode .close-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 500;
+            color: var(--dark-color);
+            font-size: 0.95rem;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .slider {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--border-color);
+            outline: none;
+            -webkit-appearance: none;
+            transition: var(--transition);
+        }
+
+        .slider:focus {
+            background: var(--gray-color);
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+            transition: var(--transition);
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+            border: none;
+        }
+
+        .slider-value {
+            min-width: 40px;
+            text-align: center;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--gray-color);
+            margin-top: 8px;
+        }
+
+        .modal-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            background-color: var(--input-bg);
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: var(--border-radius);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+            border: 1px solid var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            border-color: var(--primary-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-secondary {
+            background-color: var(--input-bg);
+            color: var(--dark-color);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--system-message-bg);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 欢迎消息 */
+        .welcome-message {
+            text-align: center;
+            color: var(--gray-color);
+            margin-top: 50px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .welcome-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+            opacity: 0.8;
+        }
+
+        .welcome-title {
+            margin-bottom: 12px;
+            color: var(--dark-color);
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .welcome-subtitle {
+            margin-bottom: 24px;
+            font-size: 1rem;
+        }
+
+        /* 复选框样式 */
+        .audio-select-checkbox {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid var(--border-color);
+            border-radius: 4px;
+            margin-right: 12px;
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0;
+            align-self: center;
+            transition: var(--transition);
+        }
+
+        .audio-select-checkbox:checked {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .audio-select-checkbox:checked::after {
+            content: "✓";
+            position: absolute;
+            color: white;
+            font-size: 12px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .voice-panel {
+                width: 240px;
+            }
+
+            .message {
+                max-width: 90%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .voice-panel {
+                width: 100%;
+                position: absolute;
+                height: 100%;
+                z-index: 20;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .voice-panel.active {
+                transform: translateX(0);
+            }
+
+            .message {
+                max-width: 95%;
+                padding: 12px;
+            }
+
+            .modal-content {
+                width: 95%;
+            }
+
+            .merge-audio-panel {
+                bottom: 80px;
+                right: 10px;
+            }
+        }
+
+        /* 工具提示 */
+        .tooltip {
+            position: relative;
+        }
+
+        .tooltip:hover::after {
+
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            white-space: nowrap;
+            z-index: 100;
+            pointer-events: none;
+            margin-bottom: 8px;
+            display: none;
+        }
+
+        .dark-mode .tooltip:hover::after {
+            background-color: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- 左侧音色列表 -->
+        <div class="voice-panel" id="voicePanel">
+            <div class="header">
+                <h1>
+                    <span class="logo">
+                        <span class="logo-icon">🔊</span>
+                        <span>VT - TTS</span>
+                    </span>
+                </h1>
+                <div class="header-actions">
+                    <button class="theme-toggle tooltip" id="themeToggle" data-tooltip="切换主题">
+                        <span>🌙</span>
+                    </button>
+                    <button id="toggleVoicePanel" class="tooltip" data-tooltip="切换面板"
+                        style="background:none; border:none; font-size:1.2rem; cursor:pointer; display:none; width:36px; height:36px; display:none; align-items:center; justify-content:center; border-radius:50%;">☰</button>
+                </div>
+            </div>
+            <div class="panel-header" style="display: none;">
+                <span>音色列表</span>
+                <span id="voiceCount">0 个音色</span>
+            </div>
+            <div class="voice-search">
+                <input type="text" class="search-input" id="voiceSearch" placeholder="搜索音色...">
+            </div>
+            <div class="voice-list" id="voiceList">
+                <!-- 音色列表项将通过JavaScript动态生成 -->
+            </div>
+        </div>
+
+        <!-- 右侧聊天区域 -->
+        <div class="chat-panel">
+            <!-- 当前音色信息展示条 -->
+            <div class="voice-info-bar" id="voiceInfoBar">
+                <div class="voice-info-left">
+                    <span id="currentVoiceName">未选择音色</span>
+                    <span id="currentVoiceDetails"></span>
+                </div>
+                <div class="voice-info-right">
+                    <button class="voice-setting tooltip" id="voiceSettings" data-tooltip="音色设置">
+                        <span class="setting-icon">⚙️</span>
+                        <span>设置</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 合并音频按钮区域 -->
+            <div class="merge-audio-panel" id="mergeAudioPanel">
+                <span class="merge-audio-count">已选择 <span id="selectedAudioCount">0</span> 个音频</span>
+                <button class="merge-audio-button tooltip" id="mergeAudioButton" disabled
+                    data-tooltip="合并选中的音频文件">合并音频</button>
+            </div>
+
+            <div class="chat-history" id="chatHistory">
+                <!-- 聊天记录将通过JavaScript动态生成 -->
+                <div class="welcome-message">
+                    <div class="welcome-icon">🔊</div>
+                    <h2 class="welcome-title">欢迎使用 VT 文字转语音工具</h2>
+                    <p class="welcome-subtitle">请从左侧选择一个音色开始转换文字为语音</p>
+                </div>
+            </div>
+
+            <div class="status" id="status">就绪</div>
+
+            <div class="input-area">
+                <textarea class="text-input" id="textInput" placeholder="请输入要转换的文字..." disabled rows="1"></textarea>
+                <button class="send-button tooltip" id="sendButton" disabled data-tooltip="发送文字转语音">
+                    <span class="send-icon">↑</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 音色设置模态框 -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">音色设置</div>
+                <button class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">音调</label>
+                    <div class="slider-container">
+                        <input type="range" min="-100" max="100" value="0" class="slider" id="pitchSlider">
+                        <span class="slider-value" id="pitchValue">0</span>
+                    </div>
+                    <div class="slider-labels">
+                        <span>低音调</span>
+                        <span>高音调</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">语速</label>
+                    <div class="slider-container">
+                        <input type="range" min="-100" max="200" value="10" class="slider" id="rateSlider">
+                        <span class="slider-value" id="rateValue">1.0</span>
+                    </div>
+                    <div class="slider-labels">
+                        <span>慢速</span>
+                        <span>快速</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">音量</label>
+                    <div class="slider-container">
+                        <input type="range" min="0" max="100" value="50" class="slider" id="volumeSlider">
+                        <span class="slider-value" id="volumeValue">50%</span>
+                    </div>
+                    <div class="slider-labels">
+                        <span>小声</span>
+                        <span>大声</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelSettings">取消</button>
+                <button class="btn btn-primary" id="saveSettings">保存设置</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM元素
+            const voiceListElement = document.getElementById('voiceList');
+            const chatHistoryElement = document.getElementById('chatHistory');
+            const textInputElement = document.getElementById('textInput');
+            const sendButtonElement = document.getElementById('sendButton');
+            const statusElement = document.getElementById('status');
+            const voiceInfoBar = document.getElementById('voiceInfoBar');
+            const currentVoiceName = document.getElementById('currentVoiceName');
+            const currentVoiceDetails = document.getElementById('currentVoiceDetails');
+            const voiceSearch = document.getElementById('voiceSearch');
+            const voiceCount = document.getElementById('voiceCount');
+            const toggleVoicePanel = document.getElementById('toggleVoicePanel');
+            const voicePanel = document.getElementById('voicePanel');
+            const mergeAudioPanel = document.getElementById('mergeAudioPanel');
+            const mergeAudioButton = document.getElementById('mergeAudioButton');
+            const selectedAudioCount = document.getElementById('selectedAudioCount');
+
+            // 数据状态
+            let selectedVoice = null;
+            let audioPlayers = new Map(); // 存储音频播放器实例
+            let allVoices = []; // 存储所有音色
+            let currentVoiceSettings = {
+                pitch: 0,
+                rate: 10, // 10 对应 1.0
+                volume: 50 // 50 对应 50%
+            };
+            let selectedAudioMessages = new Map(); // 存储选中的音频消息，使用Map替代Set
+
+            // 音色设置相关元素
+            const voiceSettingsBtn = document.getElementById('voiceSettings');
+            const settingsModal = document.getElementById('settingsModal');
+            const closeModalBtn = document.querySelector('.close-button');
+            const cancelSettingsBtn = document.getElementById('cancelSettings');
+            const saveSettingsBtn = document.getElementById('saveSettings');
+            const pitchSlider = document.getElementById('pitchSlider');
+            const rateSlider = document.getElementById('rateSlider');
+            const volumeSlider = document.getElementById('volumeSlider');
+            const pitchValue = document.getElementById('pitchValue');
+            const rateValue = document.getElementById('rateValue');
+            const volumeValue = document.getElementById('volumeValue');
+            const themeToggle = document.getElementById('themeToggle');
+            const body = document.body;
+
+            // 检查本地存储中的主题设置
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                body.classList.add('dark-mode');
+                themeToggle.innerHTML = '☀️';
+                themeToggle.setAttribute('data-tooltip', '切换明亮模式');
+            } else {
+                themeToggle.innerHTML = '🌙';
+                themeToggle.setAttribute('data-tooltip', '切换暗黑模式');
+            }
+
+            // 初始化
+            initVoices();
+            initEventListeners();
+
+            // 初始化音色列表
+            async function initVoices() {
+                try {
+                    updateStatus('正在加载音色列表...');
+
+                    // 显示加载指示
+                    const loadingIndicator = document.createElement('div');
+                    loadingIndicator.className = 'loading-indicator';
+                    loadingIndicator.style.cssText = `
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        font-size: 1.2rem;
+                        color: var(--gray-color);
+                        display: flex;
+                        align-items: center;
+                        gap: 10px;
+                    `;
+                    loadingIndicator.innerHTML = '🔄 正在加载音色列表...';
+                    voiceListElement.appendChild(loadingIndicator);
+
+                    // 从主进程获取音色列表
+                    allVoices = await window.electronAPI.getVoices();
+                    console.log('获取音色列表成功:', allVoices);
+                    // 验证返回数据格式
+                    if (!Array.isArray(allVoices)) {
+                        throw new Error('无效的音色列表格式：数据不是数组');
+                    }
+
+                    // 过滤无效音色
+                    allVoices = allVoices.filter(voice => {
+                        if (!voice || typeof voice !== 'object') {
+                            console.warn('发现无效的音色对象');
+                            return false;
+                        }
+
+                        // 确保必要字段存在
+                        if (!voice.id || !voice.name || !voice.language) {
+                            console.warn('音色缺少必要字段:', voice);
+                            return false;
+                        }
+
+                        return true;
+                    });
+
+                    // 排序音色列表（按语言分组，再按名称排序）
+                    // allVoices.sort((a, b) => {
+                    //     // 首先按语言排序（中文在前）
+                    //     if (a.language.includes('中文') && !b.language.includes('中文')) return -1;
+                    //     if (!a.language.includes('中文') && b.language.includes('中文')) return 1;
+
+                    //     // 然后按名称排序
+                    //     return a.name.localeCompare(b.name);
+                    // });
+
+                    // 渲染音色列表
+                    renderVoiceList(allVoices);
+
+                    // 更新音色计数
+                    voiceCount.textContent = `${allVoices.length} 个音色`;
+
+                    // 如果有音色，选择第一个
+                    if (allVoices.length > 0) {
+                        selectVoice(allVoices[0]);
+                    } else {
+                        // 显示无音色消息
+                        const emptyMessage = document.createElement('div');
+                        emptyMessage.className = 'empty-message';
+                        emptyMessage.style.cssText = `
+                            text-align: center;
+                            padding: 20px;
+                            color: var(--gray-color);
+                            font-size: 0.95rem;
+                        `;
+                        emptyMessage.textContent = '未找到可用音色。请确保语音服务已正确安装。';
+                        voiceListElement.appendChild(emptyMessage);
+                    }
+
+                    // 移除加载指示
+                    setTimeout(() => {
+                        const loader = document.querySelector('.loading-indicator');
+                        if (loader) loader.remove();
+                    }, 300);
+
+                    // 更新状态栏
+                    updateStatus('音色列表加载完成', 'success');
+                } catch (error) {
+                    console.error('加载音色列表失败:', error);
+
+                    // 移除加载指示
+                    const loader = document.querySelector('.loading-indicator');
+                    if (loader) loader.remove();
+
+                    // 显示空音色列表消息
+                    voiceListElement.innerHTML = `
+                        <div style="text-align:center;padding:20px;color:var(--danger-color);">
+                            <div style="font-size:1.5rem;margin-bottom:10px;">❌</div>
+                            <div>无法加载音色列表</div>
+                            <div style="font-size:0.9rem;margin-top:8px;color:var(--gray-color);">${error.message}</div>
+                        </div>
+                    `;
+
+                    // 更新状态栏
+                    updateStatus('加载音色列表失败: ' + error.message, 'error');
+                }
+            }
+
+            // 渲染音色列表
+            function renderVoiceList(voices) {
+                voiceListElement.innerHTML = '';
+
+                if (voices.length === 0) {
+                    voiceListElement.innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray-color);">未找到匹配的音色</div>';
+                    return;
+                }
+
+                voices.forEach(voice => {
+                    const voiceItem = document.createElement('div');
+                    voiceItem.className = 'voice-item';
+                    voiceItem.dataset.id = voice.id;
+
+                    voiceItem.innerHTML = `
+                        <div class="voice-item-header">
+                            <div class="voice-name">${voice.name}</div>
+                            <div class="voice-tag">${voice.language.includes('中文') ? '中' : '英'}</div>
+                        </div>
+                        <div class="voice-lang">${voice.language}</div>
+                        <div class="voice-details">
+                            <div class="voice-detail-item"><i>🎵</i> 音调: ${voice.pitch >= 0 ? '+' : ''}${voice.pitch}</div>
+                            <div class="voice-detail-item"><i>⏱️</i> 语速: ${parseInt(voice.rate) >= 0 ? '+' : ''}${voice.rate}</div>
+                            <div class="voice-detail-item"><i>🔊</i> 音量: ${voice.volume}</div>
+                        </div>
+                    `;
+
+                    voiceItem.addEventListener('click', () => {
+                        // 设置选中状态
+                        document.querySelectorAll('.voice-item').forEach(item => {
+                            item.classList.remove('active');
+                        });
+                        voiceItem.classList.add('active');
+
+                        // 更新选中音色
+                        selectedVoice = voice;
+
+                        // 启用文本输入和发送按钮
+                        textInputElement.disabled = false;
+                        sendButtonElement.disabled = false;
+                        textInputElement.placeholder = `使用"${voice.name}"音色输入文字...`;
+                        textInputElement.focus();
+
+                        // 显示音色详细信息
+                        showVoiceInfo(voice);
+
+                        // 在移动设备上隐藏音色面板
+                        if (window.innerWidth <= 480) {
+                            voicePanel.classList.remove('active');
+                        }
+
+                        updateStatus(`已选择音色: ${voice.name}`, 'success');
+                    });
+
+                    voiceListElement.appendChild(voiceItem);
+                });
+            }
+
+            // 选中指定音色
+            function selectVoice(voice) {
+                // 设置选中状态
+                document.querySelectorAll('.voice-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+
+                const voiceItem = document.querySelector(`.voice-item[data-id="${voice.id}"]`);
+                if (voiceItem) {
+                    voiceItem.classList.add('active');
+                }
+
+                // 更新选中音色
+                selectedVoice = voice;
+
+                // 启用文本输入和发送按钮
+                textInputElement.disabled = false;
+                sendButtonElement.disabled = false;
+                textInputElement.placeholder = `使用"${voice.name}"音色输入文字...`;
+
+                // 显示音色详细信息
+                showVoiceInfo(voice);
+
+                updateStatus(`已选择音色: ${voice.name}`, 'success');
+            }
+
+            // 显示当前音色信息
+            function showVoiceInfo(voice) {
+                if (!voice) {
+                    currentVoiceName.textContent = '未选择音色';
+                    currentVoiceDetails.textContent = '';
+                    voiceInfoBar.style.display = 'flex';
+                    return;
+                }
+
+                currentVoiceName.textContent = voice.name;
+                currentVoiceDetails.innerHTML = `
+                    ${voice.language} • 音调: ${voice.pitch >= 0 ? '+' : ''}${voice.pitch} • 
+                    语速: ${parseInt(voice.rate) >= 0 ? '+' : ''}${voice.rate} • 音量: ${voice.volume}
+                `;
+                voiceInfoBar.style.display = 'flex';
+            }
+
+            // 初始化事件监听器
+            function initEventListeners() {
+                // 发送按钮点击事件
+                sendButtonElement.addEventListener('click', sendMessage);
+
+                // 多行输入支持
+                textInputElement.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                            // 换行（textarea默认行为）
+                            return;
+                        } else {
+                            // 普通Enter发送
+                            e.preventDefault();
+                            sendMessage();
+                        }
+                    }
+                });
+
+                // 自动调整textarea高度
+                textInputElement.addEventListener('input', () => {
+                    textInputElement.style.height = 'auto';
+                    textInputElement.style.height = Math.min(textInputElement.scrollHeight, 150) + 'px';
+                });
+
+                // 音色搜索
+                voiceSearch.addEventListener('input', (e) => {
+                    const keyword = e.target.value.toLowerCase();
+                    const filteredVoices = allVoices.filter(voice =>
+                        voice.name.toLowerCase().includes(keyword) ||
+                        voice.language.toLowerCase().includes(keyword)
+                    );
+                    renderVoiceList(filteredVoices);
+                });
+
+                // 切换音色面板（移动端）
+                toggleVoicePanel.addEventListener('click', () => {
+                    voicePanel.classList.toggle('active');
+                });
+
+                // 窗口大小改变时的处理
+                window.addEventListener('resize', () => {
+                    if (window.innerWidth > 480) {
+                        voicePanel.classList.remove('active');
+                        toggleVoicePanel.style.display = 'none';
+                    } else {
+                        toggleVoicePanel.style.display = 'flex';
+                    }
+                });
+
+                // 初始化移动端按钮显示
+                if (window.innerWidth <= 480) {
+                    toggleVoicePanel.style.display = 'flex';
+                }
+
+                // 音色设置按钮事件
+                voiceSettingsBtn.addEventListener('click', () => {
+                    if (!selectedVoice) {
+                        updateStatus('请先选择一个音色', 'error');
+                        return;
+                    }
+                    // 设置滑块的当前值
+                    pitchSlider.value = parseParamValue(selectedVoice.pitch) || 0;
+                    rateSlider.value = parseParamValue(selectedVoice.rate) || 10;
+                    volumeSlider.value = parseParamValue(selectedVoice.volume) || 50;
+                    console.log(selectedVoice);
+                    // 更新显示值
+                    updateSliderValues();
+
+                    // 显示模态框
+                    settingsModal.style.display = 'flex';
+                });
+
+                // 关闭模态框事件
+                closeModalBtn.addEventListener('click', closeSettingsModal);
+                cancelSettingsBtn.addEventListener('click', closeSettingsModal);
+
+                // 点击模态框外部关闭
+                window.addEventListener('click', (e) => {
+                    if (e.target === settingsModal) {
+                        closeSettingsModal();
+                    }
+                });
+
+                // 滑块值变化事件
+                pitchSlider.addEventListener('input', updateSliderValues);
+                rateSlider.addEventListener('input', updateSliderValues);
+                volumeSlider.addEventListener('input', updateSliderValues);
+
+                // 保存设置事件
+                saveSettingsBtn.addEventListener('click', saveVoiceSettings);
+
+                // 主题切换事件
+                themeToggle.addEventListener('click', toggleTheme);
+
+                // 添加聊天区域点击事件，用于取消音频选择
+                chatHistoryElement.addEventListener('click', (e) => {
+                    // 如果点击的不是音频选择复选框，则取消所有选择
+                    if (!e.target.classList.contains('audio-select-checkbox')) {
+                        clearAudioSelection();
+                    }
+                });
+
+                // 合并音频按钮事件
+                mergeAudioButton.addEventListener('click', mergeSelectedAudio);
+
+                // 监听主进程状态更新
+                window.electronAPI.onUpdateStatus((message) => {
+                    updateStatus(message, 'info');
+                });
+            }
+
+            // 切换主题模式
+            function toggleTheme() {
+                body.classList.toggle('dark-mode');
+
+                // 更新按钮图标和提示信息
+                if (body.classList.contains('dark-mode')) {
+                    themeToggle.innerHTML = '☀️';
+                    themeToggle.setAttribute('data-tooltip', '切换明亮模式');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    themeToggle.innerHTML = '🌙';
+                    themeToggle.setAttribute('data-tooltip', '切换暗黑模式');
+                    localStorage.setItem('theme', 'light');
+                }
+            }
+
+            // 更新滑块值显示
+            function updateSliderValues() {
+                pitchValue.textContent = pitchSlider.value >= 0 ? `+${pitchSlider.value}%` : `${pitchSlider.value}%`;
+                rateValue.textContent = rateSlider.value >= 0 ? `+${rateSlider.value}%` : `${rateSlider.value}%`;
+                // rateValue.textContent = (rateSlider.value / 10).toFixed(1);
+                volumeValue.textContent = `${volumeSlider.value}%`;
+            }
+
+            // 解析参数值
+            function parseParamValue(value) {
+                if (typeof value === 'string') {
+                    // 移除百分号并转换为整数
+                    if (value.endsWith('%')) {
+                        return parseInt(value);
+                    }
+                    // 处理带符号的数值
+                    return parseInt(value) || 0;
+                }
+                return parseInt(value) || 0;
+            }
+
+            // 关闭设置模态框
+            function closeSettingsModal() {
+                settingsModal.style.display = 'none';
+            }
+
+            // 保存音色设置
+            function saveVoiceSettings() {
+                // 更新选中音色的设置
+                console.log(rateSlider.value)
+                selectedVoice.pitch = `${parseInt(pitchSlider.value)}%`;
+                selectedVoice.rate = `${parseInt(rateSlider.value)}%`;
+                selectedVoice.volume = `${parseInt(volumeSlider.value)}%`;
+                // 更新音色信息显示
+                showVoiceInfo(selectedVoice);
+
+                // 关闭模态框
+                closeSettingsModal();
+
+                updateStatus(`已保存 ${selectedVoice.name} 的设置`, 'success');
+            }
+
+            // 发送消息
+            async function sendMessage() {
+                const text = textInputElement.value.trim();
+                if (!text || !selectedVoice) return;
+
+                // 添加用户消息到聊天记录
+                addMessageToChat(text, 'user');
+
+                // 清空输入框并重置高度
+                textInputElement.value = '';
+                textInputElement.style.height = 'auto';
+                console.log(selectedVoice)
+                //return
+                // 文字转语音
+                await textToSpeech(text, selectedVoice);
+            }
+
+            // 添加消息到聊天记录
+            function addMessageToChat(text, type, audioData) {
+                // 移除欢迎消息（如果存在）
+                const welcomeMessage = document.querySelector('.welcome-message');
+                if (welcomeMessage) {
+                    welcomeMessage.remove();
+                }
+
+                const messageElement = document.createElement('div');
+                messageElement.className = `message ${type}-message`;
+
+                // 获取当前时间
+                const now = new Date();
+                const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+                if (type === 'user') {
+                    text = text.replace(/\n/g, '<br>');
+                    messageElement.innerHTML = `
+                        <div class="message-header">
+                            <span>我</span>
+                            <span>${timeString}</span>
+                        </div>
+                        <div class="message-text">${text}</div>
+                    `;
+                } else {
+                    // 系统回复（语音）
+                    const messageId = 'msg-' + Date.now();
+                    let voiceName = selectedVoice ? selectedVoice.name : '语音助手';
+                    if (type === 'system-merged') {
+                        voiceName = '合并的语音';
+                    }
+                    messageElement.innerHTML = `
+                        <div class="message-header">
+                            <span>${voiceName}</span>
+                            <span>${timeString}</span>
+                        </div>
+                        <div class="message-text" style="display:none">${text}</div>
+                        <div class="message-audio">
+                            <input type="checkbox" class="audio-select-checkbox" data-message-id="${messageId}" data-audio-path="${audioData?.path}">
+                            <div class="audio-player" id="player-${messageId}">
+                                <button class="play-button" data-playing="false" title="播放/暂停">▶</button>
+                                <div class="audio-progress" title="播放进度">
+                                    <div class="audio-progress-filled" style="width: 0%"></div>
+                                </div>
+                                <div class="audio-time">00:00</div>
+                                ${audioData ? `<button class="download-button" title="下载语音">⬇</button>` : ''}
+                            </div>
+                        </div>
+                    `;
+
+                    // 如果有音频数据，添加下载功能
+                    if (audioData) {
+                        setTimeout(() => {
+                            const downloadBtn = messageElement.querySelector('.download-button');
+                            if (downloadBtn) {
+                                downloadBtn.addEventListener('click', () => {
+                                    downloadAudio(audioData.path, audioData.filename);
+                                });
+                            }
+
+                            // 添加音频选择复选框事件监听器
+                            const checkbox = messageElement.querySelector('.audio-select-checkbox');
+                            checkbox.addEventListener('change', (e) => {
+                                const messageId = e.target.dataset.messageId;
+                                const audioPath = e.target.dataset.audioPath;
+
+                                if (e.target.checked) {
+                                    // 使用Map存储选中的音频，以messageId为键
+                                    selectedAudioMessages.set(messageId, {
+                                        id: messageId,
+                                        path: audioPath
+                                    });
+                                } else {
+                                    // 从Map中删除
+                                    selectedAudioMessages.delete(messageId);
+                                }
+
+                                // 更新合并按钮状态
+                                updateMergeButtonState();
+                            });
+                        }, 0);
+                    }
+                }
+
+                chatHistoryElement.appendChild(messageElement);
+
+                // 滚动到底部
+                chatHistoryElement.scrollTop = chatHistoryElement.scrollHeight;
+
+                return messageElement;
+            }
+
+            // 更新合并按钮状态
+            function updateMergeButtonState() {
+                // 更新选中音频数量显示
+                selectedAudioCount.textContent = selectedAudioMessages.size;
+
+                // 根据选中数量显示/隐藏合并面板
+                if (selectedAudioMessages.size > 0) {
+                    mergeAudioPanel.classList.add('active');
+                } else {
+                    mergeAudioPanel.classList.remove('active');
+                }
+
+                // 根据选中数量启用/禁用合并按钮
+                if (selectedAudioMessages.size < 2) {
+                    mergeAudioButton.disabled = true;
+                    mergeAudioButton.setAttribute('data-tooltip', '至少需要选择两个音频文件');
+                } else {
+                    mergeAudioButton.disabled = false;
+                    mergeAudioButton.setAttribute('data-tooltip', '合并选中的音频文件');
+                }
+            }
+
+            // 清除音频选择
+            function clearAudioSelection() {
+                selectedAudioMessages.clear();
+                document.querySelectorAll('.audio-select-checkbox').forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+                updateMergeButtonState();
+            }
+
+            // 合并选中音频
+            async function mergeSelectedAudio() {
+                if (selectedAudioMessages.size < 2) {
+                    updateStatus('至少需要选择两个音频文件进行合并', 'error');
+                    return;
+                }
+
+                const count = selectedAudioMessages.size;
+                updateStatus(`正在合并 ${count} 个音频文件，请稍候...`, 'info');
+
+                try {
+                    // 获取选中音频的文件路径
+                    const filePaths = Array.from(selectedAudioMessages.values()).map(item => item.path);
+
+                    // 调用主进程合并音频文件
+                    const result = await window.electronAPI.mergeAudioFiles(filePaths);
+
+                    if (result.success) {
+                        // 添加合并后的音频消息到聊天记录
+                        const messageElement = addMessageToChat(`已合并 ${count} 个音频文件`, 'system-merged', {
+                            path: result.path,
+                            filename: result.filename
+                        });
+
+                        // 创建音频播放器
+                        const playerId = messageElement.querySelector('.audio-player').id;
+                        const playButton = messageElement.querySelector('.play-button');
+                        const progressBar = messageElement.querySelector('.audio-progress-filled');
+                        const audioTime = messageElement.querySelector('.audio-time');
+                        const checkbox = messageElement.querySelector('.audio-select-checkbox');
+
+                        // 创建HTML5 Audio对象
+                        const audio = new Audio(result.path);
+
+                        // 存储播放器状态
+                        audioPlayers.set(playerId, {
+                            audio: audio,
+                            isPlaying: false,
+                            duration: 0
+                        });
+
+                        // 获取音频时长
+                        audio.addEventListener('loadedmetadata', () => {
+                            const player = audioPlayers.get(playerId);
+                            player.duration = audio.duration;
+                            const minutes = Math.floor(audio.duration / 60);
+                            const seconds = Math.floor(audio.duration % 60);
+                            audioTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                        });
+
+                        // 播放按钮事件
+                        playButton.addEventListener('click', () => {
+                            const player = audioPlayers.get(playerId);
+                            if (audio.paused) {
+                                // 暂停其他正在播放的音频
+                                audioPlayers.forEach(p => {
+                                    if (p !== player && !p.audio.paused) {
+                                        p.audio.pause();
+                                        // 更新其他播放按钮的显示
+                                        document.querySelectorAll('.play-button').forEach(btn => {
+                                            if (btn !== playButton && btn.dataset.playing === 'true') {
+                                                btn.textContent = '▶';
+                                                btn.dataset.playing = 'false';
+                                            }
+                                        });
+                                    }
+                                });
+
+                                // 播放当前音频
+                                player.audio.play();
+                                playButton.textContent = '❚❚';
+                                playButton.dataset.playing = 'true';
+                                updateStatus(`正在播放合并后的语音...`);
+                            } else {
+                                // 暂停播放
+                                player.audio.pause();
+                                playButton.textContent = '▶';
+                                playButton.dataset.playing = 'false';
+                                updateStatus('播放已暂停');
+                            }
+                        });
+
+                        // 监听播放进度
+                        audio.addEventListener('timeupdate', () => {
+                            const player = audioPlayers.get(playerId);
+                            if (player && player.duration > 0) {
+                                const progress = (audio.currentTime / player.duration) * 100;
+                                progressBar.style.width = progress + '%';
+
+                                // 更新时间显示
+                                const currentMinutes = Math.floor(audio.currentTime / 60);
+                                const currentSeconds = Math.floor(audio.currentTime % 60);
+                                audioTime.textContent = `${currentMinutes.toString().padStart(2, '0')}:${currentSeconds.toString().padStart(2, '0')}`;
+                            }
+                        });
+
+                        // 监听播放完成
+                        audio.addEventListener('ended', () => {
+                            playButton.textContent = '▶';
+                            playButton.dataset.playing = 'false';
+                            updateStatus('播放完成', 'success');
+                        });
+
+                        // 添加音频选择复选框事件监听器
+                        checkbox.addEventListener('change', (e) => {
+                            const messageId = e.target.dataset.messageId;
+                            const audioPath = e.target.dataset.audioPath;
+
+                            if (e.target.checked) {
+                                selectedAudioMessages.set(messageId, {
+                                    id: messageId,
+                                    path: audioPath
+                                });
+                            } else {
+                                selectedAudioMessages.delete(messageId);
+                            }
+
+                            // 更新合并按钮状态
+                            updateMergeButtonState();
+                        });
+
+                        // 清除选择
+                        clearAudioSelection();
+
+                        updateStatus('音频合并完成，点击播放按钮收听', 'success');
+                    } else {
+                        throw new Error(result.error);
+                    }
+                } catch (error) {
+                    console.error('合并音频文件失败:', error);
+                    updateStatus('合并音频文件失败: ' + error.message, 'error');
+                }
+            }
+
+            // 下载音频文件
+            function downloadAudio(filePath, filename) {
+                // 创建一个隐藏的下载链接
+                const link = document.createElement('a');
+                link.href = filePath;
+                link.download = filename || 'tts-audio.mp3';
+                link.style.display = 'none';
+
+                // 添加到页面并触发下载
+                document.body.appendChild(link);
+                link.click();
+
+                // 清理
+                document.body.removeChild(link);
+
+                updateStatus('音频文件下载已开始', 'success');
+            }
+
+            // 文字转语音
+            async function textToSpeech(text, voice) {
+                try {
+                    // 显示正在转换状态
+                    updateStatus('正在转换文字为语音...', 'info');
+
+                    // 调用主进程进行文字转语音
+                    const result = await window.electronAPI.textToSpeech(text, voice);
+
+                    if (result.success) {
+                        // 添加语音消息到聊天记录
+                        const messageElement = addMessageToChat(`已将"${text}"转换为语音`, 'system', {
+                            path: result.path,
+                            filename: result.filename
+                        });
+
+                        // 创建音频播放器
+                        const playerId = messageElement.querySelector('.audio-player').id;
+                        const playButton = messageElement.querySelector('.play-button');
+                        const progressBar = messageElement.querySelector('.audio-progress-filled');
+                        const audioTime = messageElement.querySelector('.audio-time');
+                        const checkbox = messageElement.querySelector('.audio-select-checkbox');
+
+                        // 创建HTML5 Audio对象
+                        const audio = new Audio(result.path);
+
+                        // 存储播放器状态
+                        audioPlayers.set(playerId, {
+                            audio: audio,
+                            isPlaying: false,
+                            duration: 0
+                        });
+
+                        // 获取音频时长
+                        audio.addEventListener('loadedmetadata', () => {
+                            const player = audioPlayers.get(playerId);
+                            player.duration = audio.duration;
+                            const minutes = Math.floor(audio.duration / 60);
+                            const seconds = Math.floor(audio.duration % 60);
+                            audioTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                        });
+
+                        // 播放按钮事件
+                        playButton.addEventListener('click', () => {
+                            const player = audioPlayers.get(playerId);
+                            if (audio.paused) {
+                                // 暂停其他正在播放的音频
+                                audioPlayers.forEach(p => {
+                                    if (p !== player && !p.audio.paused) {
+                                        p.audio.pause();
+                                        // 更新其他播放按钮的显示
+                                        document.querySelectorAll('.play-button').forEach(btn => {
+                                            if (btn !== playButton && btn.dataset.playing === 'true') {
+                                                btn.textContent = '▶';
+                                                btn.dataset.playing = 'false';
+                                            }
+                                        });
+                                    }
+                                });
+
+                                // 播放当前音频
+                                player.audio.play();
+                                playButton.textContent = '❚❚';
+                                playButton.dataset.playing = 'true';
+                                updateStatus('正在播放语音...');
+                            } else {
+                                // 暂停播放
+                                player.audio.pause();
+                                playButton.textContent = '▶';
+                                playButton.dataset.playing = 'false';
+                                updateStatus('播放已暂停');
+                            }
+                        });
+
+                        // 监听播放进度
+                        audio.addEventListener('timeupdate', () => {
+                            const player = audioPlayers.get(playerId);
+                            if (player && player.duration > 0) {
+                                const progress = (audio.currentTime / player.duration) * 100;
+                                progressBar.style.width = progress + '%';
+
+                                // 更新时间显示
+                                const currentMinutes = Math.floor(audio.currentTime / 60);
+                                const currentSeconds = Math.floor(audio.currentTime % 60);
+                                audioTime.textContent = `${currentMinutes.toString().padStart(2, '0')}:${currentSeconds.toString().padStart(2, '0')}`;
+                            }
+                        });
+
+                        // 监听播放完成
+                        audio.addEventListener('ended', () => {
+                            playButton.textContent = '▶';
+                            playButton.dataset.playing = 'false';
+                            updateStatus('播放完成', 'success');
+                        });
+
+                        // 添加音频选择复选框事件监听器
+                        checkbox.addEventListener('change', (e) => {
+                            const messageId = e.target.dataset.messageId;
+                            const audioPath = e.target.dataset.audioPath;
+
+                            if (e.target.checked) {
+                                selectedAudioMessages.set(messageId, {
+                                    id: messageId,
+                                    path: audioPath
+                                });
+                            } else {
+                                selectedAudioMessages.delete(messageId);
+                            }
+
+                            // 更新合并按钮状态
+                            updateMergeButtonState();
+                        });
+
+                        updateStatus('转换完成，点击播放按钮收听', 'success');
+                    } else {
+                        throw new Error(result.error);
+                    }
+                } catch (error) {
+                    console.error('文字转语音失败:', error);
+                    updateStatus('语音转换失败: ' + error.message, 'error');
+                }
+            }
+
+            // 更新状态栏
+            function updateStatus(text, type = 'info') {
+                statusElement.textContent = text;
+                statusElement.className = 'status';
+
+                if (type === 'error') {
+                    statusElement.classList.add('error');
+                } else if (type === 'success') {
+                    statusElement.classList.add('success');
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
